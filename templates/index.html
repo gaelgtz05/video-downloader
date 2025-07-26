@@ -1,0 +1,163 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Video Downloader</title>
+    <style>
+        /* Basic styling to make it look clean */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box; /* Important for padding */
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            flex-grow: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        #download-video-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        #download-audio-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #message {
+            margin-top: 1rem;
+            font-size: 1em;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Video Downloader</h1>
+        <p>Paste the URL of a video from YouTube, TikTok, etc.</p>
+        <input type="text" id="video-url" placeholder="https://www.youtube.com/watch?v=...">
+        <div class="button-group">
+            <button id="download-video-btn">Download Video (MP4)</button>
+            <button id="download-audio-btn">Download Audio (MP3)</button>
+        </div>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // This JavaScript code runs in the user's browser
+        const videoUrlInput = document.getElementById('video-url');
+        const downloadVideoBtn = document.getElementById('download-video-btn');
+        const downloadAudioBtn = document.getElementById('download-audio-btn');
+        const messageDiv = document.getElementById('message');
+
+        // Function to handle the download request
+        async function handleDownload(type) {
+            const url = videoUrlInput.value.trim();
+            if (!url) {
+                messageDiv.textContent = 'Please paste a video URL first.';
+                messageDiv.className = 'error';
+                return;
+            }
+
+            // Disable buttons and show loading message
+            setLoading(true, type);
+
+            try {
+                // This is where the frontend talks to the backend!
+                // It sends the URL and download type to our '/download' endpoint in app.py
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url, type: type }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    messageDiv.textContent = result.message;
+                    messageDiv.className = 'success';
+                } else {
+                    messageDiv.textContent = 'Error: ' + result.error;
+                    messageDiv.className = 'error';
+                }
+
+            } catch (error) {
+                messageDiv.textContent = 'A network error occurred. Is the server running?';
+                messageDiv.className = 'error';
+            } finally {
+                // Re-enable buttons
+                setLoading(false);
+            }
+        }
+        
+        function setLoading(isLoading, type) {
+            if (isLoading) {
+                downloadVideoBtn.disabled = true;
+                downloadAudioBtn.disabled = true;
+                if (type === 'video') {
+                    downloadVideoBtn.textContent = 'Downloading...';
+                } else {
+                    downloadAudioBtn.textContent = 'Downloading...';
+                }
+                messageDiv.textContent = 'Please wait, the download has started...';
+                messageDiv.className = '';
+            } else {
+                downloadVideoBtn.disabled = false;
+                downloadAudioBtn.disabled = false;
+                downloadVideoBtn.textContent = 'Download Video (MP4)';
+                downloadAudioBtn.textContent = 'Download Audio (MP3)';
+            }
+        }
+
+        // Add click listeners to the buttons
+        downloadVideoBtn.addEventListener('click', () => handleDownload('video'));
+        downloadAudioBtn.addEventListener('click', () => handleDownload('audio'));
+    </script>
+
+</body>
+</html>
