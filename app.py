@@ -31,7 +31,7 @@ def download_video():
 
     proxy_url = get_proxy_url()
 
-    # --- NEW DEBUGGING STEP ---
+    # --- THIS IS THE IMPORTANT DEBUGGING STEP ---
     # Check if the proxy file was found. If not, tell the user.
     if not proxy_url:
         return jsonify({'success': False, 'error': 'Proxy secret file not found on server. Check Render environment settings.'}), 500
