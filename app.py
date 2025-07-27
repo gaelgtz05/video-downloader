@@ -31,15 +31,18 @@ def download_video():
 
     proxy_url = get_proxy_url()
 
+    # --- NEW DEBUGGING STEP ---
+    # Check if the proxy file was found. If not, tell the user.
+    if not proxy_url:
+        return jsonify({'success': False, 'error': 'Proxy secret file not found on server. Check Render environment settings.'}), 500
+
     try:
         ydl_opts = {
             'noplaylist': True,
+            'proxy': proxy_url, # We now know the proxy exists, so we can add it directly
         }
-
-        # Add proxy to options if it exists
-        if proxy_url:
-            ydl_opts['proxy'] = proxy_url
-            print("Using proxy to fetch info.") # For debugging
+        
+        print(f"Attempting to use proxy: {proxy_url}") # For debugging in Render logs
 
         # This is a simple, stable operation. 
         # We are only fetching the video's information, not downloading anything.
