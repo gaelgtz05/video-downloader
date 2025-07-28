@@ -4,13 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Video Downloader</title>
+    <title>Video Downloader Pro</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #f4f7f6; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; flex-direction: column; height: 100vh; margin: 0; background-color: #f4f7f6; }
         .container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 500px; text-align: center; }
         h1 { color: #333; }
         input[type="text"] { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; background-color: #007bff; color: white; }
+        .button-group { display: flex; gap: 10px; }
+        button { flex-grow: 1; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
+        #download-video-btn { background-color: #007bff; color: white; }
+        #download-audio-btn { background-color: #28a745; color: white; }
         button:hover { opacity: 0.9; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         #message { margin-top: 1rem; font-size: 1em; }
@@ -20,52 +23,72 @@
 </head>
 <body>
     <div class="container">
-        <h1>Video Downloader</h1>
-        <p>Paste a video URL to test the connection.</p>
+        <h1>Video Downloader Pro</h1>
+        <p>Pega la URL del video que quieres descargar.</p>
         <input type="text" id="video-url" placeholder="https://www.youtube.com/watch?v=...">
-        <button id="test-btn">Test Connection</button>
+        <div class="button-group">
+            <button id="download-video-btn">Descargar Video (MP4)</button>
+            <button id="download-audio-btn">Descargar Audio (MP3)</button>
+        </div>
         <div id="message"></div>
     </div>
     <script>
         const videoUrlInput = document.getElementById('video-url');
-        const testBtn = document.getElementById('test-btn');
+        const downloadVideoBtn = document.getElementById('download-video-btn');
+        const downloadAudioBtn = document.getElementById('download-audio-btn');
         const messageDiv = document.getElementById('message');
 
-        async function handleTest() {
+        function triggerBrowserDownload(url, title) {
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = title || 'download';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        async function handleDownload(type) {
             const url = videoUrlInput.value.trim();
             if (!url) {
-                messageDiv.textContent = 'Please paste a video URL first.';
+                messageDiv.textContent = 'Por favor, pega una URL de video primero.';
                 messageDiv.className = 'error';
                 return;
             }
-            testBtn.disabled = true;
-            testBtn.textContent = 'Testing...';
-            messageDiv.textContent = 'Please wait...';
-            messageDiv.className = '';
-
+            setLoading(true, type);
             try {
                 const response = await fetch('/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url }),
+                    body: JSON.stringify({ url: url, type: type }),
                 });
                 const result = await response.json();
-                if (result.success) {
-                    messageDiv.textContent = result.message;
+                if (result.success && result.download_url) {
+                    messageDiv.textContent = '¡Éxito! Tu descarga comenzará en breve...';
                     messageDiv.className = 'success';
+                    triggerBrowserDownload(result.download_url, result.title);
                 } else {
                     messageDiv.textContent = 'Error: ' + result.error;
                     messageDiv.className = 'error';
                 }
             } catch (error) {
-                messageDiv.textContent = 'A network error occurred.';
+                messageDiv.textContent = 'Ocurrió un error de red. ¿Está el servidor en línea?';
                 messageDiv.className = 'error';
             } finally {
-                testBtn.disabled = false;
-                testBtn.textContent = 'Test Connection';
+                setLoading(false);
             }
         }
-        testBtn.addEventListener('click', handleTest);
+        
+        function setLoading(isLoading, type) {
+            downloadVideoBtn.disabled = isLoading;
+            downloadAudioBtn.disabled = isLoading;
+            if (isLoading) {
+                messageDiv.textContent = 'Procesando... Esto puede tardar un momento.';
+                messageDiv.className = '';
+            }
+        }
+
+        downloadVideoBtn.addEventListener('click', () => handleDownload('video'));
+        downloadAudioBtn.addEventListener('click', () => handleDownload('audio'));
     </script>
 </body>
 </html>
