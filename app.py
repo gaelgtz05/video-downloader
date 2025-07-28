@@ -3,13 +3,12 @@
 import yt_dlp
 from flask import Flask, request, jsonify, render_template
 import os
-import shutil
-import tempfile
+import uuid # Import uuid para nombres de archivo únicos
 
 # Initialize the Flask App
 app = Flask(__name__)
 
-# Path where Render stores our secret cookie file
+# Path donde Render guarda nuestro archivo de cookie secreto
 SECRET_COOKIE_PATH = '/etc/secrets/cookies.txt'
 
 # Create the main page route
@@ -26,47 +25,43 @@ def download_video():
     if not video_url:
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
 
-    # --- THE FINAL FIX: Make a writable copy of the cookie file ---
-    temp_cookie_file = None
+    # Genera un nombre de archivo temporal único en un directorio escribible
+    writable_cookie_path = f'/tmp/cookies_{uuid.uuid4()}.txt'
+    
     try:
         ydl_opts = {
             'noplaylist': True,
         }
 
-        # Check if the secret cookie file exists
+        # La solución definitiva: copia el archivo de solo lectura a una ubicación escribible
         if os.path.exists(SECRET_COOKIE_PATH):
-            print("Found secret cookie file. Creating a temporary copy.")
+            print("Archivo de cookies secreto encontrado. Creando una copia escribible.")
+            with open(SECRET_COOKIE_PATH, 'r') as read_file:
+                with open(writable_cookie_path, 'w') as write_file:
+                    write_file.write(read_file.read())
             
-            # Create a temporary file that we can write to
-            temp_fd, temp_path = tempfile.mkstemp()
-            os.close(temp_fd)
-            
-            # Copy the contents of the read-only secret file to our new temp file
-            shutil.copyfile(SECRET_COOKIE_PATH, temp_path)
-            
-            # Tell yt-dlp to use our writable copy
-            ydl_opts['cookiefile'] = temp_path
-            temp_cookie_file = temp_path # Keep track to delete it later
+            # Dile a yt-dlp que use nuestra copia escribible
+            ydl_opts['cookiefile'] = writable_cookie_path
         else:
-            print("Cookie file not found. Proceeding without authentication.")
+            print("Archivo de cookies no encontrado. Procediendo sin autenticación.")
 
-        # We are only fetching the video's information to test.
+        # Estamos obteniendo solo la información del video para probar.
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             title = info.get('title', 'Unknown title')
 
-        # If we get here, it means we have defeated the bot detection!
-        return jsonify({'success': True, 'message': f'¡ÉXITO! Video encontrado: {title}'})
+        # Si llegamos aquí, hemos vencido la detección de bots.
+        return jsonify({'success': True, 'message': f'¡LO LOGRAMOS! ✨ Video encontrado: {title}'})
 
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     
     finally:
-        # --- Clean up our temporary file ---
-        if temp_cookie_file and os.path.exists(temp_cookie_file):
-            os.remove(temp_cookie_file)
-            print(f"Cleaned up temporary cookie file: {temp_cookie_file}")
+        # Limpia nuestro archivo temporal
+        if os.path.exists(writable_cookie_path):
+            os.remove(writable_cookie_path)
+            print(f"Archivo de cookies temporal limpiado: {writable_cookie_path}")
 
 if __name__ == '__main__':
     app.run(debug=True)
