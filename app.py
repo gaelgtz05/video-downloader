@@ -24,8 +24,7 @@ def setup_selenium_options():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--window-size=1920,1080")
-    # Es importante decirle a Selenium dónde está el navegador en Render
-    chrome_options.binary_location = "/usr/bin/google-chrome-stable"
+    # Ya no necesitamos especificar la ubicación binaria, Selenium es lo suficientemente inteligente
     return chrome_options
 
 # Create the main page route
@@ -44,8 +43,10 @@ def download_video():
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
 
     print("Iniciando el proceso de descarga profesional...")
-    service = Service(executable_path="/usr/bin/chromedriver")
-    driver = webdriver.Chrome(service=service, options=setup_selenium_options())
+    
+    # --- LA CORRECCIÓN FINAL ---
+    # Dejamos que Selenium encuentre el chromedriver automáticamente
+    driver = webdriver.Chrome(options=setup_selenium_options())
     
     try:
         # --- Paso 1: Cargar la cookie en el navegador ---
@@ -54,10 +55,7 @@ def download_video():
         time.sleep(2) # Esperar a que la página cargue
 
         if os.path.exists(SECRET_COOKIE_PATH):
-            print("Archivo de cookies encontrado. Inyectando cookies en el navegador...")
-            # Leemos el archivo de cookies y se lo damos al navegador
-            # Esta parte es compleja, por ahora dejaremos que yt-dlp lo maneje
-            # pero el navegador ya está "caliente" y listo.
+            print("Archivo de cookies encontrado. Dejando que yt-dlp lo use.")
             pass 
         else:
             print("Archivo de cookies no encontrado.")
