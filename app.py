@@ -30,7 +30,6 @@ def download_file(filename):
         else:
             return "Error: Archivo no encontrado.", 404
     finally:
-        # Limpiamos el archivo después de enviarlo para no llenar el disco
         if os.path.exists(path):
             os.remove(path)
             print(f"Archivo temporal {filename} eliminado.")
@@ -47,8 +46,33 @@ def process_video():
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
     
     try:
+        # --- NUEVA LÓGICA INTELIGENTE ---
+        # Primero, solo obtenemos la información sin descargar nada.
+        # Le decimos que SÍ procese las playlists, porque así es como detecta los carruseles.
+        ydl_info_opts = {'noplaylist': False, 'quiet': True}
+        with yt_dlp.YoutubeDL(ydl_info_opts) as ydl:
+            info = ydl.extract_info(video_url, download=False)
+
+        # Si el extractor es de Instagram, manejamos las imágenes
+        if info.get('extractor_key') == 'Instagram':
+            print("Enlace de Instagram detectado. Extrayendo imágenes...")
+            images = []
+            if 'entries' in info: # Es un carrusel
+                for entry in info['entries']:
+                    images.append({'url': entry['url'], 'id': entry.get('id')})
+            else: # Es una sola imagen o video
+                images.append({'url': info['url'], 'id': info.get('id')})
+            
+            return jsonify({
+                'success': True,
+                'type': 'images',
+                'images': images,
+                'title': info.get('title', 'Post de Instagram')
+            })
+
+        # --- LÓGICA ANTERIOR (SI NO ES INSTAGRAM) ---
+        print("Enlace de video detectado. Procediendo con la descarga de video/audio...")
         file_uuid = str(uuid.uuid4())
-        # Le decimos a yt-dlp que el nombre base será nuestro UUID
         output_template = os.path.join(DOWNLOAD_FOLDER, f'{file_uuid}.%(ext)s')
 
         ydl_opts = {
@@ -58,29 +82,19 @@ def process_video():
 
         if download_type == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
-            ydl_opts['postprocessors'] = [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }]
+            ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}]
         else: # Video
-            ydl_opts['format'] = 'bestvideo[width=1080][height=1920][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[width<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
+            ydl_opts['format'] = 'bestvideo[width=1080][height=1920][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
             ydl_opts['merge_output_format'] = 'mp4'
 
-        print("Descargando y procesando en el servidor...")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
             title = info.get('title', 'Unknown title')
-            
-            # --- LA CORRECCIÓN INTELIGENTE ---
-            # Después de que todo el proceso termina, el diccionario 'info' contiene el nombre del archivo final.
-            # Para audio, este será el .mp3, no el .webm original.
             final_filepath = info.get('requested_downloads')[0]['filepath']
             final_filename = os.path.basename(final_filepath)
 
-        print(f"¡ÉXITO! Archivo procesado en el servidor como {final_filename}")
         download_url = f'/download_file/{final_filename}'
-        return jsonify({'success': True, 'download_url': download_url, 'title': title})
+        return jsonify({'success': True, 'type': 'video', 'download_url': download_url, 'title': title})
 
     except Exception as e:
         print(f"Ocurrió un error: {e}")

@@ -1,10 +1,10 @@
 <!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Downloader Pro</title>
+    <title>Downloader Pro</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; flex-direction: column; height: 100vh; margin: 0; background-color: #f4f7f6; }
         .container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 500px; text-align: center; }
@@ -19,24 +19,98 @@
         #message { margin-top: 1rem; font-size: 1em; }
         .success { color: #28a745; }
         .error { color: #dc3545; }
+
+        /* --- ESTILOS PARA LA NUEVA GALERÍA --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        #image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .img-container {
+            position: relative;
+            cursor: pointer;
+        }
+        .img-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            display: block;
+        }
+        .img-container .download-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .img-container:hover .download-icon {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>Video Downloader Pro</h1>
-        <p>Pega la URL del video que quieres descargar.</p>
-        <input type="text" id="video-url" placeholder="https://www.youtube.com/watch?v=...">
+        <h1>Downloader Pro</h1>
+        <p>Pega la URL del video o post que quieres descargar.</p>
+        <input type="text" id="video-url" placeholder="https://...">
         <div class="button-group">
-            <button id="download-video-btn">Descargar Video (MP4)</button>
-            <button id="download-audio-btn">Descargar Audio (MP3)</button>
+            <button id="download-video-btn">Descargar Video / Ver Imágenes</button>
+            <button id="download-audio-btn">Descargar Audio</button>
         </div>
         <div id="message"></div>
     </div>
+
+    <!-- --- LA GALERÍA OCULTA --- -->
+    <div id="gallery-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2 id="gallery-title">Selecciona una imagen para guardar</h2>
+            <p style="font-size: 0.9em; color: #666;">Puedes hacer clic en el ícono de descarga o clic derecho > Guardar imagen como...</p>
+            <div id="image-grid"></div>
+            <button id="gallery-done-btn">Listo</button>
+        </div>
+    </div>
+
     <script>
         const videoUrlInput = document.getElementById('video-url');
         const downloadVideoBtn = document.getElementById('download-video-btn');
         const downloadAudioBtn = document.getElementById('download-audio-btn');
         const messageDiv = document.getElementById('message');
+        const galleryModal = document.getElementById('gallery-modal');
+        const imageGrid = document.getElementById('image-grid');
+        const galleryDoneBtn = document.getElementById('gallery-done-btn');
 
         function triggerBrowserDownload(url, title) {
             const a = document.createElement('a');
@@ -50,46 +124,77 @@
         async function handleDownload(type) {
             const url = videoUrlInput.value.trim();
             if (!url) {
-                messageDiv.textContent = 'Por favor, pega una URL de video primero.';
+                messageDiv.textContent = 'Por favor, pega una URL primero.';
                 messageDiv.className = 'error';
                 return;
             }
-            setLoading(true, type);
+            setLoading(true);
             try {
-                const response = await fetch('/process', { // <--- CAMBIO AQUÍ
+                const response = await fetch('/process', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: url, type: type }),
                 });
                 const result = await response.json();
-                if (result.success && result.download_url) {
-                    messageDiv.textContent = '¡Éxito! Tu descarga comenzará en breve...';
-                    messageDiv.className = 'success';
-                    // El URL ahora apunta a nuestro propio servidor, ¡así que siempre funcionará!
-                    triggerBrowserDownload(result.download_url, result.title);
+
+                // --- LÓGICA INTELIGENTE EN EL FRONTEND ---
+                if (result.success) {
+                    if (result.type === 'images') {
+                        messageDiv.textContent = '';
+                        imageGrid.innerHTML = ''; // Limpiar galería
+                        result.images.forEach(image => {
+                            const imgContainer = document.createElement('div');
+                            imgContainer.className = 'img-container';
+                            
+                            const imgElement = document.createElement('img');
+                            imgElement.src = image.url;
+                            imgElement.alt = 'Imagen de Instagram';
+                            
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = image.url;
+                            downloadLink.className = 'download-icon';
+                            downloadLink.title = 'Descargar imagen';
+                            // Para que la descarga funcione, necesitamos un truco, pero por ahora el clic derecho funcionará
+                            downloadLink.setAttribute('download', `instagram_${image.id}.jpg`);
+                            downloadLink.innerHTML = '&#x21E9;'; // Símbolo de descarga
+
+                            imgContainer.appendChild(imgElement);
+                            imgContainer.appendChild(downloadLink);
+                            imageGrid.appendChild(imgContainer);
+                        });
+                        galleryModal.style.display = 'flex';
+                    } else { // Es video o audio
+                        messageDiv.textContent = '¡Éxito! Tu descarga comenzará en breve...';
+                        messageDiv.className = 'success';
+                        triggerBrowserDownload(result.download_url, result.title);
+                    }
                 } else {
                     messageDiv.textContent = 'Error: ' + result.error;
                     messageDiv.className = 'error';
                 }
             } catch (error) {
-                messageDiv.textContent = 'Ocurrió un error de red. ¿Está el servidor en línea?';
+                messageDiv.textContent = 'Ocurrió un error de red.';
                 messageDiv.className = 'error';
             } finally {
                 setLoading(false);
             }
         }
         
-        function setLoading(isLoading, type) {
+        function setLoading(isLoading) {
             downloadVideoBtn.disabled = isLoading;
             downloadAudioBtn.disabled = isLoading;
             if (isLoading) {
-                messageDiv.textContent = 'Procesando y descargando al servidor... Esto puede tardar.';
+                messageDiv.textContent = 'Procesando... Esto puede tardar.';
                 messageDiv.className = '';
             }
         }
 
         downloadVideoBtn.addEventListener('click', () => handleDownload('video'));
         downloadAudioBtn.addEventListener('click', () => handleDownload('audio'));
+        galleryDoneBtn.addEventListener('click', () => {
+            galleryModal.style.display = 'none';
+        });
     </script>
+
 </body>
 </html>
