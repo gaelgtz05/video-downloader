@@ -4,16 +4,11 @@ import yt_dlp
 from flask import Flask, request, jsonify, render_template
 import os
 
-# Function to read the secret proxy file from Render
-def get_proxy_url():
-    proxy_file_path = '/etc/secrets/.proxy'
-    if os.path.exists(proxy_file_path):
-        with open(proxy_file_path, 'r') as f:
-            return f.read().strip()
-    return None
-
 # Initialize the Flask App
 app = Flask(__name__)
+
+# Path where Render stores our secret cookie file
+COOKIE_FILE_PATH = '/etc/secrets/cookies.txt'
 
 # Create the main page route
 @app.route('/')
@@ -29,29 +24,27 @@ def download_video():
     if not video_url:
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
 
-    proxy_url = get_proxy_url()
-
-    # --- THIS IS THE IMPORTANT DEBUGGING STEP ---
-    # Check if the proxy file was found. If not, tell the user.
-    if not proxy_url:
-        return jsonify({'success': False, 'error': 'Proxy secret file not found on server. Check Render environment settings.'}), 500
-
     try:
         ydl_opts = {
             'noplaylist': True,
-            'proxy': proxy_url, # We now know the proxy exists, so we can add it directly
         }
-        
-        print(f"Attempting to use proxy: {proxy_url}") # For debugging in Render logs
 
-        # This is a simple, stable operation. 
-        # We are only fetching the video's information, not downloading anything.
+        # --- THE ULTIMATE FIX ---
+        # Check if the cookie file exists and add it to the options.
+        if os.path.exists(COOKIE_FILE_PATH):
+            print("Found cookie file, using it for authentication.") # For debugging
+            ydl_opts['cookiefile'] = COOKIE_FILE_PATH
+        else:
+            print("Cookie file not found. Proceeding without authentication.") # For debugging
+
+        # We are only fetching the video's information to test.
+        # This is the most stable operation.
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             title = info.get('title', 'Unknown title')
 
-        # If we get here, it means the proxy worked!
-        return jsonify({'success': True, 'message': f'SUCCESS! Found video: {title}'})
+        # If we get here, it means we have defeated the bot detection!
+        return jsonify({'success': True, 'message': f'AUTHENTICATION SUCCESS! Video found: {title}'})
 
     except Exception as e:
         print(f"An error occurred: {e}")
