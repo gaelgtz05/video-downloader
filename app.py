@@ -22,11 +22,10 @@ if not os.path.exists(DOWNLOAD_FOLDER):
 def index():
     return render_template('index.html')
 
-# --- NUEVO: RUTA PARA DESCARGAR EL ARCHIVO DESDE NUESTRO SERVIDOR ---
+# Ruta para descargar el archivo desde nuestro servidor
 @app.route('/download_file/<filename>')
 def download_file(filename):
     path = os.path.join(DOWNLOAD_FOLDER, filename)
-    # Usamos un bloque try/finally para asegurarnos de que el archivo se borre después de enviarlo
     try:
         if os.path.exists(path):
             return send_file(path, as_attachment=True)
@@ -38,7 +37,7 @@ def download_file(filename):
             print(f"Archivo temporal {filename} eliminado.")
 
 
-# Create the main API endpoint
+# El endpoint principal de la API
 @app.route('/process', methods=['POST'])
 def process_video():
     data = request.get_json()
@@ -51,13 +50,12 @@ def process_video():
     writable_cookie_path = f'/tmp/cookies_{uuid.uuid4()}.txt'
     
     try:
-        # Generamos un nombre de archivo único para la descarga
         file_uuid = str(uuid.uuid4())
         output_template = os.path.join(DOWNLOAD_FOLDER, f'{file_uuid}.%(ext)s')
 
         ydl_opts = {
             'noplaylist': True,
-            'outtmpl': output_template, # Guardar en nuestro directorio temporal
+            'outtmpl': output_template,
         }
 
         if os.path.exists(SECRET_COOKIE_PATH):
@@ -78,19 +76,19 @@ def process_video():
                 'preferredquality': '192',
             }]
         else: # Video
-            ydl_opts['format'] = 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]'
+            # --- LA INSTRUCCIÓN DE PRECISIÓN ---
+            # Prioridad #1: Exactamente 1080x1920. Luego, otros formatos HD como fallback.
+            ydl_opts['format'] = 'bestvideo[width=1080][height=1920][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[width<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
             ydl_opts['merge_output_format'] = 'mp4'
 
         print("Descargando video al servidor...")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
             title = info.get('title', 'Unknown title')
-            # Obtenemos el nombre del archivo que se guardó
             downloaded_file = ydl.prepare_filename(info)
             final_filename = os.path.basename(downloaded_file)
 
         print(f"¡ÉXITO! Video descargado al servidor como {final_filename}")
-        # En lugar de un enlace de TikTok, le damos un enlace a nuestro propio servidor
         download_url = f'/download_file/{final_filename}'
         return jsonify({'success': True, 'download_url': download_url, 'title': title})
 
