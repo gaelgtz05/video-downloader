@@ -3,12 +3,14 @@
 import yt_dlp
 from flask import Flask, request, jsonify, render_template
 import os
+import shutil
+import tempfile
 
 # Initialize the Flask App
 app = Flask(__name__)
 
 # Path where Render stores our secret cookie file
-COOKIE_FILE_PATH = '/etc/secrets/cookies.txt'
+SECRET_COOKIE_PATH = '/etc/secrets/cookies.txt'
 
 # Create the main page route
 @app.route('/')
@@ -24,31 +26,47 @@ def download_video():
     if not video_url:
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
 
+    # --- THE FINAL FIX: Make a writable copy of the cookie file ---
+    temp_cookie_file = None
     try:
         ydl_opts = {
             'noplaylist': True,
         }
 
-        # --- THE ULTIMATE FIX ---
-        # Check if the cookie file exists and add it to the options.
-        if os.path.exists(COOKIE_FILE_PATH):
-            print("Found cookie file, using it for authentication.") # For debugging
-            ydl_opts['cookiefile'] = COOKIE_FILE_PATH
+        # Check if the secret cookie file exists
+        if os.path.exists(SECRET_COOKIE_PATH):
+            print("Found secret cookie file. Creating a temporary copy.")
+            
+            # Create a temporary file that we can write to
+            temp_fd, temp_path = tempfile.mkstemp()
+            os.close(temp_fd)
+            
+            # Copy the contents of the read-only secret file to our new temp file
+            shutil.copyfile(SECRET_COOKIE_PATH, temp_path)
+            
+            # Tell yt-dlp to use our writable copy
+            ydl_opts['cookiefile'] = temp_path
+            temp_cookie_file = temp_path # Keep track to delete it later
         else:
-            print("Cookie file not found. Proceeding without authentication.") # For debugging
+            print("Cookie file not found. Proceeding without authentication.")
 
         # We are only fetching the video's information to test.
-        # This is the most stable operation.
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             title = info.get('title', 'Unknown title')
 
         # If we get here, it means we have defeated the bot detection!
-        return jsonify({'success': True, 'message': f'AUTHENTICATION SUCCESS! Video found: {title}'})
+        return jsonify({'success': True, 'message': f'¡ÉXITO! Video encontrado: {title}'})
 
     except Exception as e:
         print(f"An error occurred: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+    
+    finally:
+        # --- Clean up our temporary file ---
+        if temp_cookie_file and os.path.exists(temp_cookie_file):
+            os.remove(temp_cookie_file)
+            print(f"Cleaned up temporary cookie file: {temp_cookie_file}")
 
 if __name__ == '__main__':
     app.run(debug=True)
