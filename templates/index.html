@@ -56,7 +56,7 @@
             }
             setLoading(true, type);
             try {
-                const response = await fetch('/download', {
+                const response = await fetch('/process', { // <--- CAMBIO AQUÍ
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: url, type: type }),
@@ -65,6 +65,7 @@
                 if (result.success && result.download_url) {
                     messageDiv.textContent = '¡Éxito! Tu descarga comenzará en breve...';
                     messageDiv.className = 'success';
+                    // El URL ahora apunta a nuestro propio servidor, ¡así que siempre funcionará!
                     triggerBrowserDownload(result.download_url, result.title);
                 } else {
                     messageDiv.textContent = 'Error: ' + result.error;
@@ -82,7 +83,7 @@
             downloadVideoBtn.disabled = isLoading;
             downloadAudioBtn.disabled = isLoading;
             if (isLoading) {
-                messageDiv.textContent = 'Procesando... Esto puede tardar hasta un minuto.';
+                messageDiv.textContent = 'Procesando y descargando al servidor... Esto puede tardar.';
                 messageDiv.className = '';
             }
         }
