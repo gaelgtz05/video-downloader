@@ -3,29 +3,13 @@
 import yt_dlp
 from flask import Flask, request, jsonify, render_template
 import os
-import time
-
-# ¡Nuestra nueva herramienta!
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+import uuid # Para nombres de archivo únicos
 
 # Initialize the Flask App
 app = Flask(__name__)
 
 # Path donde Render guarda nuestro archivo de cookie secreto
 SECRET_COOKIE_PATH = '/etc/secrets/cookies.txt'
-
-# --- Configuración para Selenium en Render ---
-def setup_selenium_options():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless") # Correr Chrome sin interfaz gráfica
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
-    # Ya no necesitamos especificar la ubicación binaria, Selenium es lo suficientemente inteligente
-    return chrome_options
 
 # Create the main page route
 @app.route('/')
@@ -42,36 +26,35 @@ def download_video():
     if not video_url:
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
 
-    print("Iniciando el proceso de descarga profesional...")
-    
-    # --- LA CORRECCIÓN FINAL ---
-    # Dejamos que Selenium encuentre el chromedriver automáticamente
-    driver = webdriver.Chrome(options=setup_selenium_options())
+    # --- LA SOLUCIÓN DEFINITIVA AL ERROR "Read-only file system" ---
+    # Creamos un nombre de archivo único en el único directorio donde Render nos deja escribir: /tmp
+    writable_cookie_path = f'/tmp/cookies_{uuid.uuid4()}.txt'
     
     try:
-        # --- Paso 1: Cargar la cookie en el navegador ---
-        print("Cargando la página de YouTube para establecer el dominio...")
-        driver.get("https://www.youtube.com")
-        time.sleep(2) # Esperar a que la página cargue
-
-        if os.path.exists(SECRET_COOKIE_PATH):
-            print("Archivo de cookies encontrado. Dejando que yt-dlp lo use.")
-            pass 
-        else:
-            print("Archivo de cookies no encontrado.")
-
-        # --- Paso 2: Usar yt-dlp con el navegador ya "caliente" ---
         ydl_opts = {
             'noplaylist': True,
-            'cookiefile': SECRET_COOKIE_PATH if os.path.exists(SECRET_COOKIE_PATH) else None,
         }
-        
+
+        # Copiamos el contenido de nuestro "Boleto VIP" secreto a la "fotocopia" escribible
+        if os.path.exists(SECRET_COOKIE_PATH):
+            print("Cookie secreta encontrada. Creando copia escribible...")
+            with open(SECRET_COOKIE_PATH, 'r') as read_file:
+                cookie_content = read_file.read()
+            with open(writable_cookie_path, 'w') as write_file:
+                write_file.write(cookie_content)
+            
+            # Le decimos a yt-dlp que use nuestra fotocopia
+            ydl_opts['cookiefile'] = writable_cookie_path
+        else:
+            print("Cookie secreta no encontrada. Procediendo sin autenticación.")
+
+        # Opciones específicas para video o audio
         if download_type == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
         else: # Video
             ydl_opts['format'] = 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/best[ext=mp4][height<=1080]'
 
-        print("Extrayendo información del video con yt-dlp...")
+        print("Extrayendo información del video...")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
             title = info.get('title', 'Unknown title')
@@ -84,12 +67,14 @@ def download_video():
         return jsonify({'success': True, 'download_url': download_url, 'title': title})
 
     except Exception as e:
-        print(f"Ocurrió un error catastrófico: {e}")
-        return jsonify({'success': False, 'error': f"Ocurrió un error en el servidor: {e}"}), 500
+        print(f"Ocurrió un error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
     
     finally:
-        print("Cerrando el navegador del servidor.")
-        driver.quit()
+        # Limpiamos nuestra fotocopia
+        if os.path.exists(writable_cookie_path):
+            os.remove(writable_cookie_path)
+            print(f"Copia de cookie temporal eliminada.")
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,14 +1,10 @@
 services:
   - type: web
-    name: video-downloader # Puedes cambiar esto si le diste otro nombre en Render
+    name: video-downloader # O el nombre que le hayas puesto en Render
     env: python
-    plan: starter # Asegúrate de que este sea el plan que estás pagando
+    plan: starter
     buildCommand: "pip install -r requirements.txt"
-    # --- ¡ESTA ES LA LÍNEA QUE CAMBIAMOS! ---
-    startCommand: "gunicorn app:app --timeout 300" 
+    startCommand: "gunicorn app:app --timeout 300"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.4
-    systemPackages:
-      - name: google-chrome-stable
-      - name: chromedriver
