@@ -8,8 +8,6 @@ import uuid
 # Initialize the Flask App
 app = Flask(__name__)
 
-# Path donde Render guarda nuestro archivo de cookie secreto
-SECRET_COOKIE_PATH = '/etc/secrets/cookies.txt'
 # Directorio temporal para guardar las descargas
 DOWNLOAD_FOLDER = '/tmp/downloads'
 
@@ -32,6 +30,7 @@ def download_file(filename):
         else:
             return "Error: Archivo no encontrado.", 404
     finally:
+        # Limpiamos el archivo después de enviarlo para no llenar el disco
         if os.path.exists(path):
             os.remove(path)
             print(f"Archivo temporal {filename} eliminado.")
@@ -46,27 +45,16 @@ def process_video():
     
     if not video_url:
         return jsonify({'success': False, 'error': 'No URL provided.'}), 400
-
-    writable_cookie_path = f'/tmp/cookies_{uuid.uuid4()}.txt'
     
     try:
         file_uuid = str(uuid.uuid4())
+        # Le decimos a yt-dlp que el nombre base será nuestro UUID
         output_template = os.path.join(DOWNLOAD_FOLDER, f'{file_uuid}.%(ext)s')
 
         ydl_opts = {
             'noplaylist': True,
             'outtmpl': output_template,
         }
-
-        if os.path.exists(SECRET_COOKIE_PATH):
-            print("Cookie secreta encontrada. Creando copia escribible...")
-            with open(SECRET_COOKIE_PATH, 'r') as read_file:
-                cookie_content = read_file.read()
-            with open(writable_cookie_path, 'w') as write_file:
-                write_file.write(cookie_content)
-            ydl_opts['cookiefile'] = writable_cookie_path
-        else:
-            print("Cookie secreta no encontrada.")
 
         if download_type == 'audio':
             ydl_opts['format'] = 'bestaudio/best'
@@ -76,30 +64,27 @@ def process_video():
                 'preferredquality': '192',
             }]
         else: # Video
-            # --- LA INSTRUCCIÓN DE PRECISIÓN ---
-            # Prioridad #1: Exactamente 1080x1920. Luego, otros formatos HD como fallback.
             ydl_opts['format'] = 'bestvideo[width=1080][height=1920][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[width<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]'
             ydl_opts['merge_output_format'] = 'mp4'
 
-        print("Descargando video al servidor...")
+        print("Descargando y procesando en el servidor...")
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=True)
             title = info.get('title', 'Unknown title')
-            downloaded_file = ydl.prepare_filename(info)
-            final_filename = os.path.basename(downloaded_file)
+            
+            # --- LA CORRECCIÓN INTELIGENTE ---
+            # Después de que todo el proceso termina, el diccionario 'info' contiene el nombre del archivo final.
+            # Para audio, este será el .mp3, no el .webm original.
+            final_filepath = info.get('requested_downloads')[0]['filepath']
+            final_filename = os.path.basename(final_filepath)
 
-        print(f"¡ÉXITO! Video descargado al servidor como {final_filename}")
+        print(f"¡ÉXITO! Archivo procesado en el servidor como {final_filename}")
         download_url = f'/download_file/{final_filename}'
         return jsonify({'success': True, 'download_url': download_url, 'title': title})
 
     except Exception as e:
         print(f"Ocurrió un error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-    
-    finally:
-        if os.path.exists(writable_cookie_path):
-            os.remove(writable_cookie_path)
-            print("Copia de cookie temporal eliminada.")
 
 if __name__ == '__main__':
     app.run(debug=True)
