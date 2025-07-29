@@ -33,49 +33,51 @@
                 <div class="progress-bar-inner" id="progress-bar-inner"></div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal para Descargar la App -->
-    <div id="app-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <button class="close-modal" id="close-modal-btn">&times;</button>
+        <!-- ***** NUEVA SECCIÓN PARA DESCARGAR LA APP (reemplaza el modal) ***** -->
+        <div id="app-promo-section" class="app-promo hidden">
             <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de XTRAACT" class="modal-logo">
-            <h2>Función Exclusiva de la App</h2>
-            <p>Para descargar videos de YouTube e Instagram con la máxima calidad y velocidad, necesitas nuestra aplicación de escritorio gratuita.</p>
-            
-            <!-- ***** ENLACE DE DESCARGA DIRECTO ***** -->
+            <h2>Función Exclusiva de la App de Escritorio</h2>
+            <p>Para descargar videos de YouTube e Instagram con la máxima calidad y velocidad, necesitas nuestra aplicación gratuita.</p>
             <a href="https://drive.google.com/uc?export=download&id=1_drI3hOj6Qw2Z56xY7V63rciBWiVDy1u" class="download-app-btn" download>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Descargar XTRAACT para Mac
             </a>
             <p class="small-text">Seguro, rápido y sin anuncios.</p>
         </div>
+        <!-- ***** FIN DE LA NUEVA SECCIÓN ***** -->
+
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('download-form');
+            const urlInput = document.getElementById('url');
             const statusArea = document.getElementById('status-area');
             const statusMessage = document.getElementById('status-message');
             const progressBar = document.getElementById('progress-bar-inner');
-            const modal = document.getElementById('app-modal');
-            const closeModalBtn = document.getElementById('close-modal-btn');
+            const appPromoSection = document.getElementById('app-promo-section'); // La nueva sección
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const url = document.getElementById('url').value;
+                const url = urlInput.value;
                 const platform = getPlatform(url);
 
+                // Lógica actualizada: en lugar de mostrar un modal, muestra la sección
                 if (platform === 'youtube' || platform === 'instagram') {
-                    modal.classList.remove('hidden');
+                    appPromoSection.classList.remove('hidden');
+                    statusArea.classList.add('hidden'); // Oculta otros mensajes de estado
                     return;
                 }
                 
                 if (platform !== 'tiktok') {
                     showStatus('Error: Solo se soportan enlaces de TikTok en la web.', true);
+                    appPromoSection.classList.add('hidden'); // Oculta la promo si hay error
                     return;
                 }
 
+                // Si es un enlace de TikTok, oculta la promo y procede con la descarga
+                appPromoSection.classList.add('hidden');
                 showStatus('Iniciando descarga...', false);
                 progressBar.style.width = '25%';
 
@@ -101,16 +103,6 @@
                     }
                 } catch (error) {
                     showStatus('Error de conexión con el servidor.', true);
-                }
-            });
-
-            closeModalBtn.addEventListener('click', () => {
-                modal.classList.add('hidden');
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.add('hidden');
                 }
             });
 
