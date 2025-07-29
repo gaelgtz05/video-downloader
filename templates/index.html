@@ -15,7 +15,6 @@
         <!-- Logo de la App -->
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de XTRAACT" class="logo">
         
-        <h1>El Contenido que Quieres, Cuando Quieras</h1>
         <p class="subtitle">Descarga videos de TikTok directamente. Para YouTube e Instagram, obtén nuestra app de escritorio.</p>
 
         <!-- Formulario de Descarga -->
@@ -34,16 +33,14 @@
             </div>
         </div>
 
-        <!-- ***** NUEVA SECCIÓN PARA DESCARGAR LA APP (reemplaza el modal) ***** -->
-        <div id="app-promo-section" class="app-promo hidden">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de XTRAACT" class="modal-logo">
-            <h2>Función Exclusiva de la App de Escritorio</h2>
-            <p>Para descargar videos de YouTube e Instagram con la máxima calidad y velocidad, necesitas nuestra aplicación gratuita.</p>
+        <!-- ***** NUEVA SECCIÓN FIJA PARA DESCARGAR LA APP ***** -->
+        <div class="app-promo-fixed">
+            <h2>Obtén la Experiencia Completa</h2>
+            <p>Descarga videos de todas las plataformas, elige la calidad y mucho más con nuestra app gratuita.</p>
             <a href="https://drive.google.com/uc?export=download&id=1_drI3hOj6Qw2Z56xY7V63rciBWiVDy1u" class="download-app-btn" download>
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Descargar XTRAACT para Mac
+                Descargar para MAC
             </a>
-            <p class="small-text">Seguro, rápido y sin anuncios.</p>
         </div>
         <!-- ***** FIN DE LA NUEVA SECCIÓN ***** -->
 
@@ -56,28 +53,23 @@
             const statusArea = document.getElementById('status-area');
             const statusMessage = document.getElementById('status-message');
             const progressBar = document.getElementById('progress-bar-inner');
-            const appPromoSection = document.getElementById('app-promo-section'); // La nueva sección
 
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const url = urlInput.value;
                 const platform = getPlatform(url);
 
-                // Lógica actualizada: en lugar de mostrar un modal, muestra la sección
+                // Lógica actualizada: Muestra un mensaje en lugar de un pop-up
                 if (platform === 'youtube' || platform === 'instagram') {
-                    appPromoSection.classList.remove('hidden');
-                    statusArea.classList.add('hidden'); // Oculta otros mensajes de estado
+                    showStatus('Para YouTube e Instagram, por favor usa la app de escritorio.', true);
                     return;
                 }
                 
                 if (platform !== 'tiktok') {
                     showStatus('Error: Solo se soportan enlaces de TikTok en la web.', true);
-                    appPromoSection.classList.add('hidden'); // Oculta la promo si hay error
                     return;
                 }
 
-                // Si es un enlace de TikTok, oculta la promo y procede con la descarga
-                appPromoSection.classList.add('hidden');
                 showStatus('Iniciando descarga...', false);
                 progressBar.style.width = '25%';
 
@@ -116,11 +108,9 @@
             function showStatus(message, isError) {
                 statusArea.classList.remove('hidden');
                 statusMessage.textContent = message;
-                statusMessage.style.color = isError ? '#ff4d4d' : '#2ecc71';
+                statusMessage.style.color = isError ? '#ff4d4d' : '#EAEAEA'; // Cambiado a texto claro para info
                 progressBar.style.backgroundColor = isError ? '#ff4d4d' : '#2ecc71';
-                if(isError) {
-                    progressBar.style.width = '100%';
-                }
+                progressBar.style.width = isError ? '100%' : '0%'; // No mostrar progreso para mensajes de info
             }
         });
     </script>
