@@ -1,105 +1,136 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Downloader Pro</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; justify-content: center; align-items: center; flex-direction: column; min-height: 100vh; margin: 0; background-color: #f4f7f6; }
-        .container { background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 90%; max-width: 500px; text-align: center; }
-        h1 { color: #333; }
-        input[type="text"] { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
-        .button-group { display: flex; gap: 10px; }
-        button { flex-grow: 1; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: background-color 0.2s; }
-        #download-video-btn { background-color: #007bff; color: white; }
-        #download-audio-btn { background-color: #28a745; color: white; }
-        button:hover { opacity: 0.9; }
-        button:disabled { background-color: #ccc; }
-        #message { margin-top: 1rem; font-size: 1em; }
-        .success { color: #28a745; }
-        .error { color: #dc3545; }
-        /* --- ESTILOS PARA EL BANNER DE LA APP --- */
-        #app-banner {
-            display: none; /* Oculto por defecto */
-            background: linear-gradient(45deg, #6a11cb 0%, #2575fc 100%);
-            color: white;
-            padding: 1.5rem;
-            border-radius: 8px;
-            margin-top: 1.5rem;
-            text-align: left;
-        }
-        #app-banner h3 { margin-top: 0; }
-        #app-banner a {
-            display: inline-block;
-            background-color: white;
-            color: #333;
-            padding: 10px 20px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 1rem;
-        }
-    </style>
+    <title>XTRAACT - Descargador de Videos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+
     <div class="container">
-        <h1>Downloader Pro</h1>
-        <p>Pega la URL del video que quieres descargar.</p>
-        <input type="text" id="video-url" placeholder="https://...">
-        <div class="button-group">
-            <button id="download-video-btn">Descargar Video (MP4)</button>
-            <button id="download-audio-btn">Descargar Audio (MP3)</button>
-        </div>
-        <div id="message"></div>
-        <!-- --- EL BANNER OCULTO --- -->
-        <div id="app-banner">
-            <h3>¿Descargar de YouTube o Instagram?</h3>
-            <p>Para la mejor experiencia y para vencer su alta seguridad, ¡usa nuestra aplicación de escritorio gratuita para Mac!</p>
-            <a href="#" id="app-download-link" target="_blank">Descargar App para Mac</a>
+        <!-- Logo de la App -->
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de XTRAACT" class="logo">
+        
+        <h1>El Contenido que Quieres, Cuando Quieras</h1>
+        <p class="subtitle">Descarga videos de TikTok directamente. Para YouTube e Instagram, obtén nuestra app de escritorio.</p>
+
+        <!-- Formulario de Descarga -->
+        <form id="download-form">
+            <div class="input-wrapper">
+                <input type="text" id="url" name="url" placeholder="Pega aquí el enlace del video..." required>
+                <button type="submit" id="submit-btn">Descargar</button>
+            </div>
+        </form>
+        
+        <!-- Área de Mensajes y Progreso -->
+        <div id="status-area" class="hidden">
+            <p id="status-message"></p>
+            <div class="progress-bar">
+                <div class="progress-bar-inner" id="progress-bar-inner"></div>
+            </div>
         </div>
     </div>
-    <script>
-        const videoUrlInput = document.getElementById('video-url');
-        const downloadVideoBtn = document.getElementById('download-video-btn');
-        const downloadAudioBtn = document.getElementById('download-audio-btn');
-        const messageDiv = document.getElementById('message');
-        const appBanner = document.getElementById('app-banner');
 
-        // --- LÓGICA INTELIGENTE PARA MOSTRAR EL BANNER ---
-        videoUrlInput.addEventListener('input', () => {
-            const url = videoUrlInput.value.trim();
-            if (url.includes('youtube.com') || url.includes('youtu.be') || url.includes('instagram.com')) {
-                appBanner.style.display = 'block';
-            } else {
-                appBanner.style.display = 'none';
+    <!-- Modal para Descargar la App -->
+    <div id="app-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="close-modal" id="close-modal-btn">&times;</button>
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de XTRAACT" class="modal-logo">
+            <h2>Función Exclusiva de la App</h2>
+            <p>Para descargar videos de YouTube e Instagram con la máxima calidad y velocidad, necesitas nuestra aplicación de escritorio gratuita.</p>
+            
+            <!-- ***** ENLACE DE DESCARGA DIRECTO ***** -->
+            <a href="https://drive.google.com/uc?export=download&id=1_drI3hOj6Qw2Z56xY7V63rciBWiVDy1u" class="download-app-btn" download>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Descargar XTRAACT para Mac
+            </a>
+            <p class="small-text">Seguro, rápido y sin anuncios.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('download-form');
+            const statusArea = document.getElementById('status-area');
+            const statusMessage = document.getElementById('status-message');
+            const progressBar = document.getElementById('progress-bar-inner');
+            const modal = document.getElementById('app-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const url = document.getElementById('url').value;
+                const platform = getPlatform(url);
+
+                if (platform === 'youtube' || platform === 'instagram') {
+                    modal.classList.remove('hidden');
+                    return;
+                }
+                
+                if (platform !== 'tiktok') {
+                    showStatus('Error: Solo se soportan enlaces de TikTok en la web.', true);
+                    return;
+                }
+
+                showStatus('Iniciando descarga...', false);
+                progressBar.style.width = '25%';
+
+                try {
+                    const response = await fetch('/download', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url: url })
+                    });
+                    
+                    const data = await response.json();
+
+                    if (data.success) {
+                        showStatus('¡Video listo! Descargando...', false);
+                        progressBar.style.width = '100%';
+                        window.location.href = data.download_url;
+                        setTimeout(() => {
+                           statusArea.classList.add('hidden');
+                           form.reset();
+                        }, 3000);
+                    } else {
+                        showStatus(data.message || 'Ocurrió un error.', true);
+                    }
+                } catch (error) {
+                    showStatus('Error de conexión con el servidor.', true);
+                }
+            });
+
+            closeModalBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
+
+            function getPlatform(url) {
+                if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
+                if (url.includes('instagram.com')) return 'instagram';
+                if (url.includes('tiktok.com')) return 'tiktok';
+                return 'unknown';
+            }
+
+            function showStatus(message, isError) {
+                statusArea.classList.remove('hidden');
+                statusMessage.textContent = message;
+                statusMessage.style.color = isError ? '#ff4d4d' : '#2ecc71';
+                progressBar.style.backgroundColor = isError ? '#ff4d4d' : '#2ecc71';
+                if(isError) {
+                    progressBar.style.width = '100%';
+                }
             }
         });
-
-        // El resto del script es el que ya funcionaba
-        function triggerBrowserDownload(url, title) {
-            const a = document.createElement('a'); a.href = url; a.download = title || 'download';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        }
-        async function handleDownload(type) {
-            const url = videoUrlInput.value.trim();
-            if (!url) { messageDiv.textContent = 'Por favor, pega una URL.'; messageDiv.className = 'error'; return; }
-            setLoading(true);
-            try {
-                const response = await fetch('/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url, type: type }), });
-                const result = await response.json();
-                if (result.success && result.download_url) {
-                    messageDiv.textContent = '¡Éxito! Tu descarga comenzará...'; messageDiv.className = 'success';
-                    triggerBrowserDownload(result.download_url, result.title);
-                } else { messageDiv.textContent = 'Error: ' + result.error; messageDiv.className = 'error'; }
-            } catch (error) { messageDiv.textContent = 'Ocurrió un error de red.'; messageDiv.className = 'error'; } finally { setLoading(false); }
-        }
-        function setLoading(isLoading) {
-            downloadVideoBtn.disabled = isLoading; downloadAudioBtn.disabled = isLoading;
-            if (isLoading) { messageDiv.textContent = 'Procesando...'; messageDiv.className = ''; }
-        }
-        downloadVideoBtn.addEventListener('click', () => handleDownload('video'));
-        downloadAudioBtn.addEventListener('click', () => handleDownload('audio'));
     </script>
 </body>
 </html>
