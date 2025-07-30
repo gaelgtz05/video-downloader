@@ -1,4 +1,4 @@
-('/Users/gaelsosaa/Desktop/video-downloader/build/XTRAACT/PYZ-00.pyz',
+('/Users/gaelsosaa/Desktop/video-downloader/build/xtraact/PYZ-00.pyz',
  [('PyQt6',
    '/Users/gaelsosaa/Desktop/video-downloader/venv/lib/python3.9/site-packages/PyQt6/__init__.py',
    'PYMODULE'),

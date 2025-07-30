@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDisplayName</key>
-	<string>XTRAACT</string>
+	<string>xtraact</string>
 	<key>CFBundleExecutable</key>
-	<string>XTRAACT</string>
+	<string>xtraact</string>
 	<key>CFBundleIconFile</key>
 	<string>icon.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>XTRAACT</string>
+	<string>xtraact</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>XTRAACT</string>
+	<string>xtraact</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

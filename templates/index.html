@@ -4,115 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XTRAACT - Descargador de Videos</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #EAEAEA;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 48px;
+            font-weight: bold;
+            color: #0A74DA; /* Azul */
+        }
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        .download-button {
+            display: inline-block;
+            background-color: #0A74DA;
+            color: white;
+            padding: 15px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 12px;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .download-button:hover {
+            background-color: #0056b3;
+        }
+        .instructions {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #AAAAAA;
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
-
     <div class="container">
-        <!-- Logo de la App -->
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de XTRAACT" class="logo">
+        <h1>XTRAACT</h1>
+        <p>
+            La herramienta definitiva para descargar tus videos favoritos de todas las redes sociales, directamente a tu computadora.
+        </p>
         
-        <p class="subtitle">Descarga videos de TikTok directamente. Para YouTube e Instagram, obtén nuestra app de escritorio.</p>
+        <a href="https://drive.google.com/file/d/1-L9U_KKlYvPbIaAuZJ41vs346ZJAvxRc/view?usp=sharing" target="_blank" class="download-button">
+            Descargar para macOS
+        </a>
 
-        <!-- Formulario de Descarga -->
-        <form id="download-form">
-            <div class="input-wrapper">
-                <input type="text" id="url" name="url" placeholder="Pega aquí el enlace del video..." required>
-                <button type="submit" id="submit-btn">Descargar</button>
-            </div>
-        </form>
-        
-        <!-- Área de Mensajes y Progreso -->
-        <div id="status-area" class="hidden">
-            <p id="status-message"></p>
-            <div class="progress-bar">
-                <div class="progress-bar-inner" id="progress-bar-inner"></div>
-            </div>
+        <div class="instructions">
+            <strong>Nota para usuarios de Mac:</strong> La primera vez que abras la app, haz clic derecho sobre el ícono y selecciona "Abrir".
         </div>
-
-        <!-- ***** NUEVA SECCIÓN FIJA PARA DESCARGAR LA APP ***** -->
-        <div class="app-promo-fixed">
-            <h2>Obtén la Experiencia Completa</h2>
-            <p>Descarga videos de todas las plataformas, elige la calidad y mucho más con nuestra app gratuita.</p>
-            <a href="https://drive.google.com/uc?export=download&id=1_drI3hOj6Qw2Z56xY7V63rciBWiVDy1u" class="download-app-btn" download>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Descargar para MAC
-            </a>
-        </div>
-        <!-- ***** FIN DE LA NUEVA SECCIÓN ***** -->
-
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('download-form');
-            const urlInput = document.getElementById('url');
-            const statusArea = document.getElementById('status-area');
-            const statusMessage = document.getElementById('status-message');
-            const progressBar = document.getElementById('progress-bar-inner');
-
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const url = urlInput.value;
-                const platform = getPlatform(url);
-
-                // Lógica actualizada: Muestra un mensaje en lugar de un pop-up
-                if (platform === 'youtube' || platform === 'instagram') {
-                    showStatus('Para YouTube e Instagram, por favor usa la app de escritorio.', true);
-                    return;
-                }
-                
-                if (platform !== 'tiktok') {
-                    showStatus('Error: Solo se soportan enlaces de TikTok en la web.', true);
-                    return;
-                }
-
-                showStatus('Iniciando descarga...', false);
-                progressBar.style.width = '25%';
-
-                try {
-                    const response = await fetch('/download', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ url: url })
-                    });
-                    
-                    const data = await response.json();
-
-                    if (data.success) {
-                        showStatus('¡Video listo! Descargando...', false);
-                        progressBar.style.width = '100%';
-                        window.location.href = data.download_url;
-                        setTimeout(() => {
-                           statusArea.classList.add('hidden');
-                           form.reset();
-                        }, 3000);
-                    } else {
-                        showStatus(data.message || 'Ocurrió un error.', true);
-                    }
-                } catch (error) {
-                    showStatus('Error de conexión con el servidor.', true);
-                }
-            });
-
-            function getPlatform(url) {
-                if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube';
-                if (url.includes('instagram.com')) return 'instagram';
-                if (url.includes('tiktok.com')) return 'tiktok';
-                return 'unknown';
-            }
-
-            function showStatus(message, isError) {
-                statusArea.classList.remove('hidden');
-                statusMessage.textContent = message;
-                statusMessage.style.color = isError ? '#ff4d4d' : '#EAEAEA'; // Cambiado a texto claro para info
-                progressBar.style.backgroundColor = isError ? '#ff4d4d' : '#2ecc71';
-                progressBar.style.width = isError ? '100%' : '0%'; // No mostrar progreso para mensajes de info
-            }
-        });
-    </script>
 </body>
 </html>

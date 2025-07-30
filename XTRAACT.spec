@@ -5,7 +5,7 @@ a = Analysis(
     ['desktop_app.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('ffmpeg', '.'), ('logo.png', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='XTRAACT',
+    name='xtraact',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -41,11 +41,11 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='XTRAACT',
+    name='xtraact',
 )
 app = BUNDLE(
     coll,
-    name='XTRAACT.app',
+    name='xtraact.app',
     icon='icon.icns',
     bundle_identifier=None,
 )
