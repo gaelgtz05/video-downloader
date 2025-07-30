@@ -4,71 +4,161 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XTRAACT - Descargador de Videos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
+            background-color: #1E1E1E;
             color: #EAEAEA;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
-            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .container {
-            max-width: 600px;
-            padding: 20px;
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+        }
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
         }
         h1 {
-            font-size: 48px;
-            font-weight: bold;
-            color: #0A74DA; /* Azul */
+            font-size: 24px;
+            color: #EAEAEA;
+            margin-bottom: 10px;
         }
-        p {
-            font-size: 18px;
-            line-height: 1.6;
+        .subtitle {
+            font-size: 16px;
+            color: #AAAAAA;
+            margin-bottom: 30px;
         }
-        .download-button {
-            display: inline-block;
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        #video-url {
+            flex-grow: 1;
+            background-color: #2D2D2D;
+            border: 1px solid #444;
+            border-radius: 8px 0 0 8px;
+            padding: 15px;
+            font-size: 16px;
+            color: #EAEAEA;
+            outline: none;
+        }
+        #download-btn {
             background-color: #0A74DA;
             color: white;
-            padding: 15px 30px;
-            font-size: 20px;
+            border: none;
+            padding: 0 25px;
+            font-size: 16px;
             font-weight: bold;
-            text-decoration: none;
-            border-radius: 12px;
-            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
             transition: background-color 0.3s ease;
         }
-        .download-button:hover {
+        #download-btn:hover {
             background-color: #0056b3;
         }
-        .instructions {
-            margin-top: 40px;
-            font-size: 14px;
-            color: #AAAAAA;
-            border: 1px solid #444;
-            padding: 15px;
-            border-radius: 8px;
+        .app-download-section {
+            margin-top: 50px;
+            border-top: 1px solid #444;
+            padding-top: 30px;
+        }
+        .app-download-button {
             display: inline-block;
+            background-color: #2D2D2D;
+            color: #EAEAEA;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        .app-download-button:hover {
+            background-color: #444;
+        }
+        .app-download-button i {
+            margin-right: 10px;
+        }
+        #message {
+            margin-top: 20px;
+            color: #AAAAAA;
+            height: 20px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>XTRAACT</h1>
-        <p>
-            La herramienta definitiva para descargar tus videos favoritos de todas las redes sociales, directamente a tu computadora.
-        </p>
+        <img src="/static/logo.png" alt="XTRAACT Logo" class="logo">
         
-        <a href="https://drive.google.com/file/d/1-L9U_KKlYvPbIaAuZJ41vs346ZJAvxRc/view?usp=sharing" target="_blank" class="download-button">
-            Descargar para macOS
-        </a>
+        <h1>Descargador de Videos de TikTok</h1>
+        <p class="subtitle">Pega el enlace de un video de TikTok para descargarlo sin marca de agua.</p>
 
-        <div class="instructions">
-            <strong>Nota para usuarios de Mac:</strong> La primera vez que abras la app, haz clic derecho sobre el ícono y selecciona "Abrir".
+        <form id="download-form">
+            <div class="input-group">
+                <input type="url" id="video-url" name="url" placeholder="Pega el enlace del video aquí..." required>
+                <button type="submit" id="download-btn">Descargar</button>
+            </div>
+        </form>
+        
+        <div id="message"></div>
+
+        <div class="app-download-section">
+            <p class="subtitle">¿Quieres descargar videos de YouTube e Instagram?<br>Prueba nuestra aplicación de escritorio.</p>
+            <a href="https://drive.google.com/file/d/1-L9U_KKlYvPbIaAuZJ41vs346ZJAvxRc/view?usp=sharing" target="_blank" class="app-download-button">
+                <i class="fab fa-apple"></i> Descargar para macOS
+            </a>
         </div>
     </div>
+
+    <script>
+        // Este script se encarga de la descarga de TikTok
+        document.getElementById('download-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const url = document.getElementById('video-url').value;
+            const messageDiv = document.getElementById('message');
+            const downloadBtn = document.getElementById('download-btn');
+
+            messageDiv.textContent = 'Procesando, por favor espera...';
+            downloadBtn.disabled = true;
+
+            try {
+                const response = await fetch('/download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url: url }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    messageDiv.textContent = '¡Video listo! La descarga comenzará en breve.';
+                    // Crea un enlace temporal para iniciar la descarga
+                    const link = document.createElement('a');
+                    link.href = data.download_url;
+                    link.setAttribute('download', 'video.mp4'); // O el nombre que prefieras
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } else {
+                    messageDiv.textContent = 'Error: ' + (data.error || 'No se pudo descargar el video.');
+                }
+            } catch (error) {
+                messageDiv.textContent = 'Error de conexión. Inténtalo de nuevo.';
+            } finally {
+                downloadBtn.disabled = false;
+            }
+        });
+    </script>
 </body>
 </html>
